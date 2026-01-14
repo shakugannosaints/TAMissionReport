@@ -26,7 +26,7 @@ const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime(
 
 export default defineConfig({
   plugins,
-  base: process.env.GITHUB_ACTIONS ? "/TAMissionReport/" : "/",
+  base: "/",
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "client", "src"),
