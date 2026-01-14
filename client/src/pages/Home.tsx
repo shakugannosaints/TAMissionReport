@@ -412,7 +412,7 @@ export default function Home() {
               </div>
               <div className="text-5xl">⭐</div>
             </div>
-            <input type="text" className="w-full h-20 border-2 border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-400 text-2xl font-bold" value={formData.finalRating} onChange={(e) => setFormData({...formData, finalRating: e.target.value})} />
+            <input type="text" className="w-full h-20 border-2 border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-400 text-2xl font-bold text-center" value={formData.finalRating} onChange={(e) => setFormData({...formData, finalRating: e.target.value})} />
           </div>
 
           {/* 混沌池 */}
@@ -421,7 +421,7 @@ export default function Home() {
               <div className="text-2xl font-bold text-blue-600">混沌池</div>
               <div className="text-5xl">🌀</div>
             </div>
-            <input type="text" className="w-full h-20 border-2 border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-400 text-2xl font-bold" value={formData.chaosPool} onChange={(e) => setFormData({...formData, chaosPool: e.target.value})} />
+            <input type="text" className="w-full h-20 border-2 border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-400 text-2xl font-bold text-center" value={formData.chaosPool} onChange={(e) => setFormData({...formData, chaosPool: e.target.value})} />
           </div>
 
           {/* 评优 Section */}
@@ -434,7 +434,7 @@ export default function Home() {
                 <div className="text-2xl font-bold text-red-600">MVP</div>
                 <img src={MVP} alt="MVP" className="w-24 h-20" />
               </div>
-              <input type="text" className="w-full h-24 border-2 border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-400 text-lg font-semibold" value={formData.mvp} onChange={(e) => setFormData({...formData, mvp: e.target.value})} />
+              <input type="text" className="w-full h-24 border-2 border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-400 text-lg font-semibold text-center" value={formData.mvp} onChange={(e) => setFormData({...formData, mvp: e.target.value})} />
             </div>
 
             {/* 察看期 */}
@@ -443,7 +443,7 @@ export default function Home() {
                 <div className="text-2xl font-bold text-gray-700">察看期</div>
                 <img src={察看期} alt="察看期" className="w-24 h-20" />
               </div>
-              <input type="text" className="w-full h-24 border-2 border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-400 text-lg font-semibold" value={formData.observationPeriod} onChange={(e) => setFormData({...formData, observationPeriod: e.target.value})} />
+              <input type="text" className="w-full h-24 border-2 border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-400 text-lg font-semibold text-center" value={formData.observationPeriod} onChange={(e) => setFormData({...formData, observationPeriod: e.target.value})} />
             </div>
 
             {/* 参与者 */}
@@ -452,7 +452,7 @@ export default function Home() {
                 <div className="text-2xl font-bold text-gray-700">参与者</div>
                 <img src={参与者} alt="参与者" className="w-24 h-20" />
               </div>
-              <input type="text" className="w-full h-28 border-2 border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-400 text-lg font-semibold" value={formData.participants} onChange={(e) => setFormData({...formData, participants: e.target.value})} />
+              <input type="text" className="w-full h-28 border-2 border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-400 text-lg font-semibold text-center" value={formData.participants} onChange={(e) => setFormData({...formData, participants: e.target.value})} />
             </div>
           </div>
         </div>
