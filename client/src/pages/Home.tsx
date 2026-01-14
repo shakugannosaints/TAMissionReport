@@ -359,7 +359,7 @@ export default function Home() {
                   <tr className="bg-gray-100">
                     <th className="px-6 py-4 text-left font-bold text-gray-700 border-r-2 border-gray-300 rounded-tl-lg">目标</th>
                     <th className="px-6 py-4 text-left font-bold text-gray-700 border-r-2 border-gray-300">奖励</th>
-                    <th className="px-6 py-4 text-left font-bold text-gray-700 border-r-2 border-gray-300">按特工</th>
+                    <th className="px-6 py-4 text-left font-bold text-gray-700 border-r-2 border-gray-300">特工</th>
                     <th className="px-4 py-4 text-right font-bold text-gray-700 rounded-tr-lg w-24"> </th>
                   </tr>
                 </thead>
