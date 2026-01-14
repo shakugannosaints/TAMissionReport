@@ -1,4 +1,6 @@
 import React, { useState, useRef } from 'react';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 import TriangleAgencyLogo from '../../../assets/TriangleAgency.png';
 import 已中和 from '../../../assets/已中和.png';
 import 已捕获 from '../../../assets/已捕获.png';
@@ -25,6 +27,7 @@ export default function Home() {
   });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const exportAreaRef = useRef<HTMLDivElement>(null);
 
   const handleStatusChange = (status: string) => {
     setFormData(prev => ({
@@ -54,11 +57,31 @@ export default function Home() {
     }));
   };
 
+  const removeItem = (idx: number) => {
+    setFormData(prev => {
+      const next = prev.items.filter((_, i) => i !== idx);
+      return {
+        ...prev,
+        items: next.length > 0 ? next : [{ name: '', quantity: '', note: '' }],
+      };
+    });
+  };
+
   const addObjective = () => {
     setFormData(prev => ({
       ...prev,
       objectives: [...prev.objectives, { target: '', reward: '', specialist: '' }]
     }));
+  };
+
+  const removeObjective = (idx: number) => {
+    setFormData(prev => {
+      const next = prev.objectives.filter((_, i) => i !== idx);
+      return {
+        ...prev,
+        objectives: next.length > 0 ? next : [{ target: '', reward: '', specialist: '' }],
+      };
+    });
   };
 
   const handleExportJSON = () => {
@@ -72,6 +95,81 @@ export default function Home() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+  };
+
+  const captureExportArea = async () => {
+    const el = exportAreaRef.current;
+    if (!el) {
+      throw new Error('导出区域未找到');
+    }
+
+    return await html2canvas(el, {
+      backgroundColor: '#ffffff',
+      useCORS: true,
+      scale: Math.min(2, window.devicePixelRatio || 1),
+      scrollX: 0,
+      scrollY: -window.scrollY,
+      windowWidth: document.documentElement.clientWidth,
+      windowHeight: document.documentElement.clientHeight,
+    });
+  };
+
+  const handleExportImage = async () => {
+    try {
+      const canvas = await captureExportArea();
+      const fileName = `任务报告_${new Date().toISOString().slice(0, 10)}.png`;
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          alert('导出失败：无法生成图片');
+          return;
+        }
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }, 'image/png');
+    } catch (e) {
+      alert(`导出失败：${(e as Error).message || '未知错误'}`);
+    }
+  };
+
+  const handleExportPDF = async () => {
+    try {
+      const canvas = await captureExportArea();
+      const imgData = canvas.toDataURL('image/png');
+
+      const pdf = new jsPDF({
+        orientation: 'p',
+        unit: 'mm',
+        format: 'a4',
+      });
+
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = pageWidth;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
+      heightLeft -= pageHeight;
+
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
+        heightLeft -= pageHeight;
+      }
+
+      pdf.save(`任务报告_${new Date().toISOString().slice(0, 10)}.pdf`);
+    } catch (e) {
+      alert(`导出失败：${(e as Error).message || '未知错误'}`);
+    }
   };
 
   const handleImportJSON = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -102,6 +200,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-white p-10" style={{ fontFamily: '"Noto Sans SC", "Microsoft YaHei", sans-serif' }}>
+      <div ref={exportAreaRef}>
       {/* Header */}
       <div className="flex justify-between items-start mb-12">
         <div className="flex items-start gap-8">
@@ -123,7 +222,7 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-10">
+      <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_320px] gap-10">
         {/* Left Column - Main Content */}
         <div className="col-span-2 space-y-10">
           {/* 异常状态 Section */}
@@ -177,7 +276,7 @@ export default function Home() {
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex-1">
                     <div className="font-bold text-gray-700 mb-3 text-base">其他：</div>
-                    <input type="text" placeholder="请输入" className="border-2 border-gray-300 px-4 py-2 rounded-lg text-sm w-full focus:outline-none focus:border-blue-400" value={formData.otherStatus} onChange={(e) => setFormData({...formData, otherStatus: e.target.value})} />
+                    <input type="text" placeholder="请输入" className="border-2 border-gray-300 px-4 py-2 rounded-lg text-base font-semibold w-full focus:outline-none focus:border-blue-400" value={formData.otherStatus} onChange={(e) => setFormData({...formData, otherStatus: e.target.value})} />
                   </div>
                   <input type="checkbox" className="w-6 h-6 cursor-pointer flex-shrink-0 mt-6" checked={formData.status.includes('其他')} onChange={(e) => handleStatusChange('其他')} />
                 </div>
@@ -192,47 +291,58 @@ export default function Home() {
               <div className="space-y-0">
                 <div className="grid grid-cols-2 gap-6 pb-6 border-b-2 border-gray-200">
                   <div className="bg-gray-100 px-6 py-4 font-bold text-gray-700 rounded-lg">代号</div>
-                  <input type="text" className="border-2 border-gray-300 px-4 py-3 rounded-lg focus:outline-none focus:border-blue-400" value={formData.abnormalCode} onChange={(e) => setFormData({...formData, abnormalCode: e.target.value})} />
+                  <input type="text" className="border-2 border-gray-300 px-4 py-3 rounded-lg focus:outline-none focus:border-blue-400 text-base font-semibold" value={formData.abnormalCode} onChange={(e) => setFormData({...formData, abnormalCode: e.target.value})} />
                 </div>
                 <div className="grid grid-cols-2 gap-6 py-6 border-b-2 border-gray-200">
                   <div className="bg-gray-100 px-6 py-4 font-bold text-gray-700 rounded-lg">行为</div>
-                  <input type="text" className="border-2 border-gray-300 px-4 py-3 rounded-lg focus:outline-none focus:border-blue-400" value={formData.abnormalBehavior} onChange={(e) => setFormData({...formData, abnormalBehavior: e.target.value})} />
+                  <input type="text" className="border-2 border-gray-300 px-4 py-3 rounded-lg focus:outline-none focus:border-blue-400 text-base font-semibold" value={formData.abnormalBehavior} onChange={(e) => setFormData({...formData, abnormalBehavior: e.target.value})} />
                 </div>
                 <div className="grid grid-cols-2 gap-6 py-6 border-b-2 border-gray-200">
                   <div className="bg-gray-100 px-6 py-4 font-bold text-gray-700 rounded-lg">焦点</div>
-                  <input type="text" className="border-2 border-gray-300 px-4 py-3 rounded-lg focus:outline-none focus:border-blue-400" value={formData.abnormalFocus} onChange={(e) => setFormData({...formData, abnormalFocus: e.target.value})} />
+                  <input type="text" className="border-2 border-gray-300 px-4 py-3 rounded-lg focus:outline-none focus:border-blue-400 text-base font-semibold" value={formData.abnormalFocus} onChange={(e) => setFormData({...formData, abnormalFocus: e.target.value})} />
                 </div>
                 <div className="grid grid-cols-2 gap-6 pt-6">
                   <div className="bg-gray-100 px-6 py-4 font-bold text-gray-700 rounded-lg">领域</div>
-                  <input type="text" className="border-2 border-gray-300 px-4 py-3 rounded-lg focus:outline-none focus:border-blue-400" value={formData.abnormalDomain} onChange={(e) => setFormData({...formData, abnormalDomain: e.target.value})} />
+                  <input type="text" className="border-2 border-gray-300 px-4 py-3 rounded-lg focus:outline-none focus:border-blue-400 text-base font-semibold" value={formData.abnormalDomain} onChange={(e) => setFormData({...formData, abnormalDomain: e.target.value})} />
                 </div>
               </div>
             </div>
           </div>
 
-          {/* 散选端 Section */}
+          {/* 散逸端 Section */}
           <div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-6">散选端</h2>
+            <h2 className="text-2xl font-bold text-gray-800 mb-6">散逸端</h2>
             <div className="border-2 border-gray-300 rounded-3xl p-8 overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="bg-gray-100">
                     <th className="px-6 py-4 text-left font-bold text-gray-700 border-r-2 border-gray-300 rounded-tl-lg">姓名</th>
                     <th className="px-6 py-4 text-left font-bold text-gray-700 border-r-2 border-gray-300">数量</th>
-                    <th className="px-6 py-4 text-left font-bold text-gray-700 rounded-tr-lg">备注</th>
+                    <th className="px-6 py-4 text-left font-bold text-gray-700 border-r-2 border-gray-300">备注</th>
+                    <th className="px-4 py-4 text-right font-bold text-gray-700 rounded-tr-lg w-24"> </th>
                   </tr>
                 </thead>
                 <tbody>
                   {formData.items.map((item, idx) => (
-                    <tr key={idx} className="border-b-2 border-gray-200 hover:bg-gray-50">
+                    <tr key={idx} className="group border-b-2 border-gray-200 hover:bg-gray-50">
                       <td className="px-6 py-4 border-r-2 border-gray-300">
-                        <input type="text" className="border-2 border-gray-300 px-3 py-2 rounded-lg w-full focus:outline-none focus:border-blue-400 text-sm" value={item.name} onChange={(e) => updateItem(idx, 'name', e.target.value)} />
+                        <input type="text" className="border-2 border-gray-300 px-3 py-2 rounded-lg w-full focus:outline-none focus:border-blue-400 text-base font-semibold" value={item.name} onChange={(e) => updateItem(idx, 'name', e.target.value)} />
                       </td>
                       <td className="px-6 py-4 border-r-2 border-gray-300">
-                        <input type="text" className="border-2 border-gray-300 px-3 py-2 rounded-lg w-full focus:outline-none focus:border-blue-400 text-sm" value={item.quantity} onChange={(e) => updateItem(idx, 'quantity', e.target.value)} />
+                        <input type="text" className="border-2 border-gray-300 px-3 py-2 rounded-lg w-full focus:outline-none focus:border-blue-400 text-base font-semibold" value={item.quantity} onChange={(e) => updateItem(idx, 'quantity', e.target.value)} />
                       </td>
-                      <td className="px-6 py-4">
-                        <input type="text" className="border-2 border-gray-300 px-3 py-2 rounded-lg w-full focus:outline-none focus:border-blue-400 text-sm" value={item.note} onChange={(e) => updateItem(idx, 'note', e.target.value)} />
+                      <td className="px-6 py-4 border-r-2 border-gray-300">
+                        <input type="text" className="border-2 border-gray-300 px-3 py-2 rounded-lg w-full focus:outline-none focus:border-blue-400 text-base font-semibold" value={item.note} onChange={(e) => updateItem(idx, 'note', e.target.value)} />
+                      </td>
+                      <td className="px-4 py-4 text-right align-middle">
+                        <button
+                          type="button"
+                          onClick={() => removeItem(idx)}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity px-3 py-2 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700"
+                          title="删除该行"
+                        >
+                          删除
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -251,20 +361,31 @@ export default function Home() {
                   <tr className="bg-gray-100">
                     <th className="px-6 py-4 text-left font-bold text-gray-700 border-r-2 border-gray-300 rounded-tl-lg">目标</th>
                     <th className="px-6 py-4 text-left font-bold text-gray-700 border-r-2 border-gray-300">奖励</th>
-                    <th className="px-6 py-4 text-left font-bold text-gray-700 rounded-tr-lg">按特工</th>
+                    <th className="px-6 py-4 text-left font-bold text-gray-700 border-r-2 border-gray-300">按特工</th>
+                    <th className="px-4 py-4 text-right font-bold text-gray-700 rounded-tr-lg w-24"> </th>
                   </tr>
                 </thead>
                 <tbody>
                   {formData.objectives.map((obj, idx) => (
-                    <tr key={idx} className="border-b-2 border-gray-200 hover:bg-gray-50">
+                    <tr key={idx} className="group border-b-2 border-gray-200 hover:bg-gray-50">
                       <td className="px-6 py-4 border-r-2 border-gray-300">
-                        <input type="text" className="border-2 border-gray-300 px-3 py-2 rounded-lg w-full focus:outline-none focus:border-blue-400 text-sm" value={obj.target} onChange={(e) => updateObjective(idx, 'target', e.target.value)} />
+                        <input type="text" className="border-2 border-gray-300 px-3 py-2 rounded-lg w-full focus:outline-none focus:border-blue-400 text-base font-semibold" value={obj.target} onChange={(e) => updateObjective(idx, 'target', e.target.value)} />
                       </td>
                       <td className="px-6 py-4 border-r-2 border-gray-300">
-                        <input type="text" className="border-2 border-gray-300 px-3 py-2 rounded-lg w-full focus:outline-none focus:border-blue-400 text-sm" value={obj.reward} onChange={(e) => updateObjective(idx, 'reward', e.target.value)} />
+                        <input type="text" className="border-2 border-gray-300 px-3 py-2 rounded-lg w-full focus:outline-none focus:border-blue-400 text-base font-semibold" value={obj.reward} onChange={(e) => updateObjective(idx, 'reward', e.target.value)} />
                       </td>
-                      <td className="px-6 py-4">
-                        <input type="text" className="border-2 border-gray-300 px-3 py-2 rounded-lg w-full focus:outline-none focus:border-blue-400 text-sm" value={obj.specialist} onChange={(e) => updateObjective(idx, 'specialist', e.target.value)} />
+                      <td className="px-6 py-4 border-r-2 border-gray-300">
+                        <input type="text" className="border-2 border-gray-300 px-3 py-2 rounded-lg w-full focus:outline-none focus:border-blue-400 text-base font-semibold" value={obj.specialist} onChange={(e) => updateObjective(idx, 'specialist', e.target.value)} />
+                      </td>
+                      <td className="px-4 py-4 text-right align-middle">
+                        <button
+                          type="button"
+                          onClick={() => removeObjective(idx)}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity px-3 py-2 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700"
+                          title="删除该行"
+                        >
+                          删除
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -293,7 +414,7 @@ export default function Home() {
               </div>
               <div className="text-5xl">⭐</div>
             </div>
-            <input type="text" className="w-full h-20 border-2 border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-400" value={formData.finalRating} onChange={(e) => setFormData({...formData, finalRating: e.target.value})} />
+            <input type="text" className="w-full h-20 border-2 border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-400 text-2xl font-bold" value={formData.finalRating} onChange={(e) => setFormData({...formData, finalRating: e.target.value})} />
           </div>
 
           {/* 混沌池 */}
@@ -302,7 +423,7 @@ export default function Home() {
               <div className="text-2xl font-bold text-blue-600">混沌池</div>
               <div className="text-5xl">🌀</div>
             </div>
-            <input type="text" className="w-full h-20 border-2 border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-400" value={formData.chaosPool} onChange={(e) => setFormData({...formData, chaosPool: e.target.value})} />
+            <input type="text" className="w-full h-20 border-2 border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-400 text-2xl font-bold" value={formData.chaosPool} onChange={(e) => setFormData({...formData, chaosPool: e.target.value})} />
           </div>
 
           {/* 评优 Section */}
@@ -315,7 +436,7 @@ export default function Home() {
                 <div className="text-2xl font-bold text-red-600">MVP</div>
                 <img src={MVP} alt="MVP" className="w-24 h-20" />
               </div>
-              <input type="text" className="w-full h-24 border-2 border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-400" value={formData.mvp} onChange={(e) => setFormData({...formData, mvp: e.target.value})} />
+              <input type="text" className="w-full h-24 border-2 border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-400 text-lg font-semibold" value={formData.mvp} onChange={(e) => setFormData({...formData, mvp: e.target.value})} />
             </div>
 
             {/* 察看期 */}
@@ -324,23 +445,39 @@ export default function Home() {
                 <div className="text-2xl font-bold text-gray-700">察看期</div>
                 <img src={察看期} alt="察看期" className="w-24 h-20" />
               </div>
-              <input type="text" className="w-full h-24 border-2 border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-400" value={formData.observationPeriod} onChange={(e) => setFormData({...formData, observationPeriod: e.target.value})} />
+              <input type="text" className="w-full h-24 border-2 border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-400 text-lg font-semibold" value={formData.observationPeriod} onChange={(e) => setFormData({...formData, observationPeriod: e.target.value})} />
             </div>
 
             {/* 参与者 */}
             <div className="border-2 border-gray-300 rounded-3xl p-8 bg-gray-50 hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between mb-6">
-                <div className="text-lg font-bold text-gray-700">参与者</div>
+                <div className="text-2xl font-bold text-gray-700">参与者</div>
                 <img src={参与者} alt="参与者" className="w-24 h-20" />
               </div>
-              <input type="text" className="w-full h-28 border-2 border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-400" value={formData.participants} onChange={(e) => setFormData({...formData, participants: e.target.value})} />
+              <input type="text" className="w-full h-28 border-2 border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-400 text-lg font-semibold" value={formData.participants} onChange={(e) => setFormData({...formData, participants: e.target.value})} />
             </div>
           </div>
         </div>
       </div>
 
+      </div>
+
       {/* 导入/导出按钮 - 固定在右下角 */}
       <div className="fixed bottom-8 right-8 flex flex-col gap-3 z-50">
+        <button
+          onClick={handleExportPDF}
+          className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 font-semibold transition-colors shadow-lg hover:shadow-xl flex items-center gap-2"
+          title="导出PDF"
+        >
+          导出PDF
+        </button>
+        <button
+          onClick={handleExportImage}
+          className="px-6 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-800 font-semibold transition-colors shadow-lg hover:shadow-xl flex items-center gap-2"
+          title="导出图片"
+        >
+          导出图片
+        </button>
         <button
           onClick={handleExportJSON}
           className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold transition-colors shadow-lg hover:shadow-xl flex items-center gap-2"
