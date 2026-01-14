@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import TriangleAgencyLogo from '../../../assets/TriangleAgency.png';
 import 已中和 from '../../../assets/已中和.png';
 import 已捕获 from '../../../assets/已捕获.png';
@@ -10,6 +10,7 @@ import 参与者 from '../../../assets/参与者.png';
 export default function Home() {
   const [formData, setFormData] = useState({
     status: [] as string[],
+    otherStatus: '',
     abnormalCode: '',
     abnormalBehavior: '',
     abnormalFocus: '',
@@ -22,6 +23,8 @@ export default function Home() {
     finalRating: '',
     chaosPool: '',
   });
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleStatusChange = (status: string) => {
     setFormData(prev => ({
@@ -56,6 +59,45 @@ export default function Home() {
       ...prev,
       objectives: [...prev.objectives, { target: '', reward: '', specialist: '' }]
     }));
+  };
+
+  const handleExportJSON = () => {
+    const dataStr = JSON.stringify(formData, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `任务报告_${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportJSON = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const json = JSON.parse(e.target?.result as string);
+        setFormData(json);
+        alert('导入成功！');
+      } catch (error) {
+        alert('导入失败：JSON格式错误');
+      }
+    };
+    reader.readAsText(file);
+    
+    // 重置input以允许重复导入同一文件
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const triggerImport = () => {
+    fileInputRef.current?.click();
   };
 
   return (
@@ -98,7 +140,7 @@ export default function Home() {
                       <div className="text-xs text-gray-600 mt-1">不影响绩效指标</div>
                     </div>
                   </div>
-                  <input type="checkbox" className="w-6 h-6 cursor-pointer" onChange={(e) => handleStatusChange('已中和')} />
+                  <input type="checkbox" className="w-6 h-6 cursor-pointer" checked={formData.status.includes('已中和')} onChange={(e) => handleStatusChange('已中和')} />
                 </div>
               </div>
 
@@ -112,7 +154,7 @@ export default function Home() {
                       <div className="text-xs text-gray-600 mt-1">每名特工+3嘉奖</div>
                     </div>
                   </div>
-                  <input type="checkbox" className="w-6 h-6 cursor-pointer" onChange={(e) => handleStatusChange('已捕获')} />
+                  <input type="checkbox" className="w-6 h-6 cursor-pointer" checked={formData.status.includes('已捕获')} onChange={(e) => handleStatusChange('已捕获')} />
                 </div>
               </div>
 
@@ -126,7 +168,7 @@ export default function Home() {
                       <div className="text-xs text-gray-600 mt-1">每名特工+3申诫</div>
                     </div>
                   </div>
-                  <input type="checkbox" className="w-6 h-6 cursor-pointer" onChange={(e) => handleStatusChange('已逃脱')} />
+                  <input type="checkbox" className="w-6 h-6 cursor-pointer" checked={formData.status.includes('已逃脱')} onChange={(e) => handleStatusChange('已逃脱')} />
                 </div>
               </div>
 
@@ -135,9 +177,9 @@ export default function Home() {
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex-1">
                     <div className="font-bold text-gray-700 mb-3 text-base">其他：</div>
-                    <input type="text" placeholder="请输入" className="border-2 border-gray-300 px-4 py-2 rounded-lg text-sm w-full focus:outline-none focus:border-blue-400" />
+                    <input type="text" placeholder="请输入" className="border-2 border-gray-300 px-4 py-2 rounded-lg text-sm w-full focus:outline-none focus:border-blue-400" value={formData.otherStatus} onChange={(e) => setFormData({...formData, otherStatus: e.target.value})} />
                   </div>
-                  <input type="checkbox" className="w-6 h-6 cursor-pointer flex-shrink-0 mt-6" />
+                  <input type="checkbox" className="w-6 h-6 cursor-pointer flex-shrink-0 mt-6" checked={formData.status.includes('其他')} onChange={(e) => handleStatusChange('其他')} />
                 </div>
               </div>
             </div>
@@ -295,6 +337,37 @@ export default function Home() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* 导入/导出按钮 - 固定在右下角 */}
+      <div className="fixed bottom-8 right-8 flex flex-col gap-3 z-50">
+        <button
+          onClick={handleExportJSON}
+          className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold transition-colors shadow-lg hover:shadow-xl flex items-center gap-2"
+          title="导出JSON"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+          </svg>
+          导出JSON
+        </button>
+        <button
+          onClick={triggerImport}
+          className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold transition-colors shadow-lg hover:shadow-xl flex items-center gap-2"
+          title="导入JSON"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
+          </svg>
+          导入JSON
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".json"
+          onChange={handleImportJSON}
+          className="hidden"
+        />
       </div>
     </div>
   );
