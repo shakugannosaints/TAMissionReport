@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import html2canvas from 'html2canvas';
+import { toPng } from 'html-to-image';
 import jsPDF from 'jspdf';
 import TriangleAgencyLogo from '../../../assets/TriangleAgency.png';
 import 已中和 from '../../../assets/已中和.png';
@@ -97,41 +97,31 @@ export default function Home() {
     URL.revokeObjectURL(url);
   };
 
-  const captureExportArea = async () => {
+  const captureExportAreaPng = async () => {
     const el = exportAreaRef.current;
     if (!el) {
       throw new Error('导出区域未找到');
     }
 
-    return await html2canvas(el, {
+    // `html2canvas` 会解析 CSS，遇到 Tailwind v4 的 `oklch()` 会报错。
+    // `html-to-image` 通过序列化 DOM/SVG 让浏览器渲染，兼容 `oklch()`。
+    return await toPng(el, {
+      cacheBust: true,
+      pixelRatio: Math.min(2, window.devicePixelRatio || 1),
       backgroundColor: '#ffffff',
-      useCORS: true,
-      scale: Math.min(2, window.devicePixelRatio || 1),
-      scrollX: 0,
-      scrollY: -window.scrollY,
-      windowWidth: document.documentElement.clientWidth,
-      windowHeight: document.documentElement.clientHeight,
     });
   };
 
   const handleExportImage = async () => {
     try {
-      const canvas = await captureExportArea();
       const fileName = `任务报告_${new Date().toISOString().slice(0, 10)}.png`;
-      canvas.toBlob((blob) => {
-        if (!blob) {
-          alert('导出失败：无法生成图片');
-          return;
-        }
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = fileName;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-      }, 'image/png');
+      const dataUrl = await captureExportAreaPng();
+      const link = document.createElement('a');
+      link.href = dataUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     } catch (e) {
       alert(`导出失败：${(e as Error).message || '未知错误'}`);
     }
@@ -139,8 +129,15 @@ export default function Home() {
 
   const handleExportPDF = async () => {
     try {
-      const canvas = await captureExportArea();
-      const imgData = canvas.toDataURL('image/png');
+      const imgData = await captureExportAreaPng();
+
+      const img = new Image();
+      img.decoding = 'async';
+      img.src = imgData;
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error('导出失败：图片加载失败'));
+      });
 
       const pdf = new jsPDF({
         orientation: 'p',
@@ -151,7 +148,7 @@ export default function Home() {
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
       const imgWidth = pageWidth;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      const imgHeight = (img.naturalHeight * imgWidth) / img.naturalWidth;
 
       let heightLeft = imgHeight;
       let position = 0;
