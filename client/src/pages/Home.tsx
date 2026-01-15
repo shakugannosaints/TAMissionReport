@@ -407,8 +407,7 @@ export default function Home() {
             <div className="flex items-start justify-between mb-4">
               <div>
                 <div className="text-xs text-gray-600 mb-2">仅供GM使用</div>
-                <div className="text-2xl font-bold text-red-600 leading-tight">最终</div>
-                <div className="text-2xl font-bold text-red-600 leading-tight">评级</div>
+                <div className="text-2xl font-bold text-red-600 leading-tight">最终评级</div>
               </div>
               <div className="text-5xl">⭐</div>
             </div>
